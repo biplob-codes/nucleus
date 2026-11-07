@@ -1,6 +1,6 @@
 #include <stdio.h>
 int main()
 {
-    printf("Hello from Nucleus");
-    return 0;
+	printf("Hello from Nucleus");
+	return 0;
 }

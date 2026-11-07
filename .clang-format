@@ -1,0 +1,18 @@
+# .clang-format
+BasedOnStyle: LLVM
+
+# Linux-style indentation
+UseTab: Always
+TabWidth: 8
+IndentWidth: 8
+ContinuationIndentWidth: 8
+
+# Braces: same line for control flow, own line for functions
+BreakBeforeBraces: Linux
+AllowShortFunctionsOnASingleLine: None
+
+# Keep #defines (flags, syscall numbers, mount options) aligned
+AlignConsecutiveMacros: Consecutive
+
+# Include order matters in C (feature-test macros like _GNU_SOURCE)
+SortIncludes: Never
