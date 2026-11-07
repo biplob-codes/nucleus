@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sched.h>
 #include <sys/wait.h>
+#include <sys/mount.h>
 #include <string.h>
 int main()
 {
@@ -22,6 +23,18 @@ int main()
 		printf("we are in the child process. detaching the hostname\n");
 		if (unshare(CLONE_NEWUTS) == -1) {
 			perror("hostname detachment failed");
+			return 1;
+		}
+		if (unshare(CLONE_NEWNS) == -1) {
+			perror("cloning mount table failed");
+			return 1;
+		}
+		if (mount("", "/", NULL, MS_REC | MS_PRIVATE, NULL) == -1) {
+			perror("failed to make the child mount table private");
+			return 1;
+		}
+		if (mount("nucleusproc", "/proc", "proc", 0, NULL) == -1) {
+			perror("mounting failed");
 			return 1;
 		}
 		printf("new hostname:");
