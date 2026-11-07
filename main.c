@@ -9,6 +9,10 @@
 int main()
 {
 	printf("Hello from Nucleus\n");
+	if (unshare(CLONE_NEWPID) == -1) {
+		perror("failed to create new pid namespace");
+		return 1;
+	}
 	pid_t pid = fork();
 	if (pid < 0) {
 		perror("fork failed.");
