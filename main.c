@@ -7,6 +7,14 @@
 #include <sys/wait.h>
 #include <sys/mount.h>
 #include <string.h>
+#include <sys/syscall.h>
+#include <sys/stat.h>
+#include <errno.h>
+
+int pivot_root(const char *new_root, const char *put_old)
+{
+	return syscall(SYS_pivot_root, new_root, put_old);
+}
 int main()
 {
 	printf("Hello from Nucleus\n");
@@ -33,10 +41,33 @@ int main()
 			perror("failed to make the child mount table private");
 			return 1;
 		}
+
+		char root_dir[] = "/home/biplobcodes/projects/alpine-rootfs";
+		char old_dir[] =
+			"/home/biplobcodes/projects/alpine-rootfs/olddir";
+		if (mount(root_dir, root_dir, NULL, MS_BIND | MS_REC, 0) ==
+		    -1) {
+			perror("binding root dir failed");
+			return 1;
+		}
+		if (mkdir(old_dir, 0755) == -1) {
+			if (errno != EEXIST) {
+				perror("failed to create old dir");
+				return 1;
+			}
+		}
+
+		if (pivot_root(root_dir, old_dir) == -1) {
+			perror("mounting new root failed");
+			return 1;
+		}
+		chdir("/");
 		if (mount("nucleusproc", "/proc", "proc", 0, NULL) == -1) {
 			perror("mounting failed");
 			return 1;
 		}
+		umount2("/olddir", MNT_DETACH);
+
 		printf("new hostname:");
 		char buf[64];
 		if (scanf("%63s", buf) == 1) {
@@ -46,7 +77,7 @@ int main()
 				return (1);
 			}
 			printf("hostname set successfully.");
-			execlp("bash", "bash", NULL);
+			execlp("/bin/sh", "sh", NULL);
 			perror("exec failed");
 			return (1);
 		}
