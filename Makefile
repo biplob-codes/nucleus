@@ -9,7 +9,7 @@ CFLAGS := -std=gnu11 -D_GNU_SOURCE -g \
 
 run:
 	$(CC) $(CFLAGS) $(SRCS) -o $(BIN)
-	sudo ./$(BIN)
+	sudo ./$(BIN) -h nucleus
 
 format:
 	clang-format -i $(SRCS) $(HDRS)

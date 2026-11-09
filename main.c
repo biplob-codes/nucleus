@@ -15,8 +15,19 @@ int pivot_root(const char *new_root, const char *put_old)
 {
 	return syscall(SYS_pivot_root, new_root, put_old);
 }
-int main()
+int main(int argc, char *argv[])
 {
+	char *hostname = NULL;
+	for (int i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-h") == 0) {
+			if (i + 1 < argc) {
+				hostname = argv[i + 1];
+			} else {
+				printf("no hostname found");
+				return 1;
+			}
+		}
+	}
 	printf("Hello from Nucleus\n");
 	if (unshare(CLONE_NEWPID) == -1) {
 		perror("failed to create new pid namespace");
@@ -68,19 +79,15 @@ int main()
 		}
 		umount2("/olddir", MNT_DETACH);
 
-		printf("new hostname:");
-		char buf[64];
-		if (scanf("%63s", buf) == 1) {
-			size_t len = strlen(buf);
-			if (sethostname(buf, len) == -1) {
-				perror("sethostname failed");
-				return (1);
-			}
-			printf("hostname set successfully.");
-			execlp("/bin/sh", "sh", NULL);
-			perror("exec failed");
+		size_t len = strlen(hostname);
+		if (sethostname(hostname, len) == -1) {
+			perror("sethostname failed");
 			return (1);
 		}
+		printf("hostname set successfully.");
+		execlp("/bin/sh", "sh", NULL);
+		perror("exec failed");
+		return (1);
 	}
 	waitpid(pid, NULL, 0);
 	return 0;
