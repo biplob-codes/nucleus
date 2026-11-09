@@ -75,12 +75,19 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 		free(old_fs);
-		chdir("/");
+		if (chdir("/") == -1) {
+			perror("failed to change the working directory");
+			return 1;
+		}
+
 		if (mount("nucleusproc", "/proc", "proc", 0, NULL) == -1) {
 			perror("mounting failed");
 			return 1;
 		}
-		umount2(olddir, MNT_DETACH);
+		if (umount2(olddir, MNT_DETACH) == -1) {
+			perror("failed to unmount the old dir");
+			return 1;
+		}
 
 		size_t len = strlen(conf.hostname);
 		if (sethostname(conf.hostname, len) == -1) {
