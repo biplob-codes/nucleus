@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "parser.h"
+#include "config.h"
 int pivot_root(const char *new_root, const char *put_old)
 {
 	return syscall(SYS_pivot_root, new_root, put_old);
@@ -20,7 +21,9 @@ int main(int argc, char *argv[])
 {
 	char *hostname = NULL;
 	char *root_fs = NULL;
+	Config conf;
 	parse(argc, argv, &hostname, &root_fs);
+	setup_config(&conf, &hostname, &root_fs);
 	printf("Hello from Nucleus\n");
 	if (unshare(CLONE_NEWPID) == -1) {
 		perror("failed to create new pid namespace");
@@ -46,15 +49,17 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 		char *olddir = "/olddir";
-		char *old_fs = malloc(strlen(root_fs) + strlen(olddir) + 1);
+		char *old_fs =
+			malloc(strlen(conf.root_fs) + strlen(olddir) + 1);
 		if (old_fs == NULL) {
 			perror("malloc failed");
 			return 1;
 		}
-		strcpy(old_fs, root_fs);
+		strcpy(old_fs, conf.root_fs);
 		strcat(old_fs, olddir);
 
-		if (mount(root_fs, root_fs, NULL, MS_BIND | MS_REC, 0) == -1) {
+		if (mount(conf.root_fs, conf.root_fs, NULL, MS_BIND | MS_REC,
+			  0) == -1) {
 			perror("binding root dir failed");
 			return 1;
 		}
@@ -65,7 +70,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		if (pivot_root(root_fs, old_fs) == -1) {
+		if (pivot_root(conf.root_fs, old_fs) == -1) {
 			perror("mounting new root failed");
 			return 1;
 		}
@@ -76,11 +81,9 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 		umount2(olddir, MNT_DETACH);
-		if (hostname == NULL) {
-			hostname = "nucleus";
-		}
-		size_t len = strlen(hostname);
-		if (sethostname(hostname, len) == -1) {
+
+		size_t len = strlen(conf.hostname);
+		if (sethostname(conf.hostname, len) == -1) {
 			perror("sethostname failed");
 			return (1);
 		}
