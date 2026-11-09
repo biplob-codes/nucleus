@@ -88,7 +88,10 @@ int main(int argc, char *argv[])
 			perror("failed to unmount the old dir");
 			return 1;
 		}
-
+		if (rmdir(olddir) == -1) {
+			perror("failed to delete the olddir directory");
+			return 1;
+		}
 		size_t len = strlen(conf.hostname);
 		if (sethostname(conf.hostname, len) == -1) {
 			perror("sethostname failed");
