@@ -10,6 +10,7 @@
 #include <sys/syscall.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <stdlib.h>
 #include "parser.h"
 int pivot_root(const char *new_root, const char *put_old)
 {
@@ -18,7 +19,8 @@ int pivot_root(const char *new_root, const char *put_old)
 int main(int argc, char *argv[])
 {
 	char *hostname = NULL;
-	parse(argc, argv, &hostname);
+	char *root_fs = NULL;
+	parse(argc, argv, &hostname, &root_fs);
 	printf("Hello from Nucleus\n");
 	if (unshare(CLONE_NEWPID) == -1) {
 		perror("failed to create new pid namespace");
@@ -43,32 +45,37 @@ int main(int argc, char *argv[])
 			perror("failed to make the child mount table private");
 			return 1;
 		}
+		char *olddir = "/olddir";
+		char *old_fs = malloc(strlen(root_fs) + strlen(olddir) + 1);
+		if (old_fs == NULL) {
+			perror("malloc failed");
+			return 1;
+		}
+		strcpy(old_fs, root_fs);
+		strcat(old_fs, olddir);
 
-		char root_dir[] = "/home/biplobcodes/projects/alpine-rootfs";
-		char old_dir[] =
-			"/home/biplobcodes/projects/alpine-rootfs/olddir";
-		if (mount(root_dir, root_dir, NULL, MS_BIND | MS_REC, 0) ==
-		    -1) {
+		if (mount(root_fs, root_fs, NULL, MS_BIND | MS_REC, 0) == -1) {
 			perror("binding root dir failed");
 			return 1;
 		}
-		if (mkdir(old_dir, 0755) == -1) {
+		if (mkdir(old_fs, 0755) == -1) {
 			if (errno != EEXIST) {
 				perror("failed to create old dir");
 				return 1;
 			}
 		}
 
-		if (pivot_root(root_dir, old_dir) == -1) {
+		if (pivot_root(root_fs, old_fs) == -1) {
 			perror("mounting new root failed");
 			return 1;
 		}
+		free(old_fs);
 		chdir("/");
 		if (mount("nucleusproc", "/proc", "proc", 0, NULL) == -1) {
 			perror("mounting failed");
 			return 1;
 		}
-		umount2("/olddir", MNT_DETACH);
+		umount2(olddir, MNT_DETACH);
 		if (hostname == NULL) {
 			hostname = "nucleus";
 		}
