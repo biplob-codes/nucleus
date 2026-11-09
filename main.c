@@ -92,6 +92,12 @@ int main(int argc, char *argv[])
 		perror("exec failed");
 		return (1);
 	}
-	waitpid(pid, NULL, 0);
-	return 0;
+
+	int status;
+	waitpid(pid, &status, 0);
+	if (WIFEXITED(status))
+		return WEXITSTATUS(status);
+
+	if (WIFSIGNALED(status))
+		return (WTERMSIG(status) + 128);
 }
