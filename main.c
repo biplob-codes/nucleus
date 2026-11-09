@@ -10,7 +10,7 @@
 #include <sys/syscall.h>
 #include <sys/stat.h>
 #include <errno.h>
-
+#include "parser.h"
 int pivot_root(const char *new_root, const char *put_old)
 {
 	return syscall(SYS_pivot_root, new_root, put_old);
@@ -18,16 +18,7 @@ int pivot_root(const char *new_root, const char *put_old)
 int main(int argc, char *argv[])
 {
 	char *hostname = NULL;
-	for (int i = 1; i < argc; i++) {
-		if (strcmp(argv[i], "-h") == 0) {
-			if (i + 1 < argc) {
-				hostname = argv[i + 1];
-			} else {
-				printf("no hostname found");
-				return 1;
-			}
-		}
-	}
+	parse(argc, argv, &hostname);
 	printf("Hello from Nucleus\n");
 	if (unshare(CLONE_NEWPID) == -1) {
 		perror("failed to create new pid namespace");
@@ -78,7 +69,9 @@ int main(int argc, char *argv[])
 			return 1;
 		}
 		umount2("/olddir", MNT_DETACH);
-
+		if (hostname == NULL) {
+			hostname = "nucleus";
+		}
 		size_t len = strlen(hostname);
 		if (sethostname(hostname, len) == -1) {
 			perror("sethostname failed");
