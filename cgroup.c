@@ -107,11 +107,8 @@ void cleanup_cgroup(pid_t pid)
 	int n = snprintf(cg_path, cg_path_size, CGROUP_ROOT "/nucleus-%d", pid);
 	if (n < 0 || (size_t)n >= cg_path_size) {
 		perror("failed to construct cgroup path");
-		exit(EXIT_FAILURE);
 	}
 	if (rmdir(cg_path) == -1) {
 		perror("failed to cgroup dir");
-		exit(EXIT_FAILURE);
 	}
-	exit(EXIT_SUCCESS);
 }
