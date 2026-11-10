@@ -11,14 +11,13 @@
 #include "container.h"
 #define STACK_SIZE (1024 * 1024)
 
-// int argc, char *argv[]
-int main()
+int main(int argc, char *argv[])
 {
-	// char *hostname = NULL;
-	// char *root_fs = NULL;
-	// Config conf;
-	// parse(argc, argv, &hostname, &root_fs);
-	// setup_config(&conf, &hostname, &root_fs);
+	char *hostname = NULL;
+	char *root_fs = NULL;
+	Config conf;
+	parse(argc, argv, &hostname, &root_fs);
+	setup_config(&conf, &hostname, &root_fs);
 	char *stack = malloc(STACK_SIZE);
 	if (!stack) {
 		perror("malloc failed for stack");
@@ -26,14 +25,14 @@ int main()
 	}
 	char *stack_top = stack + STACK_SIZE;
 	int flags = CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWNS | SIGCHLD;
-	int fd[2];
-	if (pipe(fd) == -1) {
+	if (pipe(conf.sync_fd) == -1) {
 		perror("pipe for fd");
 		return 1;
 	}
-	pid_t pid = clone(container, stack_top, flags, fd);
-	close(fd[0]);
-	if (write(fd[1], "x", 1) == -1) {
+
+	pid_t pid = clone(container, stack_top, flags, &conf);
+	close(conf.sync_fd[0]);
+	if (write(conf.sync_fd[1], "x", 1) == -1) {
 		perror("write to fd");
 		return 1;
 	}
