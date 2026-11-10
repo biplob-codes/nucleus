@@ -37,18 +37,22 @@ int main(int argc, char *argv[])
 	}
 
 	pid_t pid = clone(container, stack_top, flags, &conf);
+	if (pid == -1) {
+		perror("failed to clone");
+		return 1;
+	}
 	close(conf.sync_fd[0]);
 	int result = init_cgroup(pid);
 	if (result != 0) {
 		perror("initializing cgroup");
+		kill(pid, SIGKILL);
 		return 1;
 	}
 	if (write(conf.sync_fd[1], "x", 1) == -1) {
 		perror("write to fd");
+		kill(pid, SIGKILL);
 		return 1;
 	}
-	printf("Hello from Nucleus\n");
-
 	int status;
 	waitpid(pid, &status, 0);
 	free(stack);
