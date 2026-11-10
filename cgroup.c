@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "utils.h"
 #define CGROUP_ROOT "/sys/fs/cgroup"
 #define MAX_MEMORY  "67108864"
@@ -98,4 +99,19 @@ int init_cgroup(pid_t pid)
 		return 1;
 	}
 	return 0;
+}
+void cleanup_cgroup(pid_t pid)
+{
+	char cg_path[400];
+	size_t cg_path_size = sizeof(cg_path);
+	int n = snprintf(cg_path, cg_path_size, CGROUP_ROOT "/nucleus-%d", pid);
+	if (n < 0 || (size_t)n >= cg_path_size) {
+		perror("failed to construct cgroup path");
+		exit(EXIT_FAILURE);
+	}
+	if (rmdir(cg_path) == -1) {
+		perror("failed to cgroup dir");
+		exit(EXIT_FAILURE);
+	}
+	exit(EXIT_SUCCESS);
 }

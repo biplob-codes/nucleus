@@ -51,11 +51,13 @@ int main(int argc, char *argv[])
 	if (write(conf.sync_fd[1], "x", 1) == -1) {
 		perror("write to fd");
 		kill(pid, SIGKILL);
+		cleanup_cgroup(pid);
 		return 1;
 	}
 	int status;
 	waitpid(pid, &status, 0);
 	free(stack);
+	cleanup_cgroup(pid);
 	if (WIFEXITED(status))
 		return WEXITSTATUS(status);
 
