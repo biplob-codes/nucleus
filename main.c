@@ -46,11 +46,14 @@ int main(int argc, char *argv[])
 	if (result != 0) {
 		perror("initializing cgroup");
 		kill(pid, SIGKILL);
+		waitpid(pid, NULL, 0);
+		cleanup_cgroup(pid);
 		return 1;
 	}
 	if (write(conf.sync_fd[1], "x", 1) == -1) {
 		perror("write to fd");
 		kill(pid, SIGKILL);
+		waitpid(pid, NULL, 0);
 		cleanup_cgroup(pid);
 		return 1;
 	}
