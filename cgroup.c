@@ -5,9 +5,10 @@
 #include "utils.h"
 #define CGROUP_ROOT "/sys/fs/cgroup"
 #define MAX_MEMORY  "67108864"
+#define MAX_PIDS    "128"
 int init_cgroup(pid_t pid)
 {
-	char *controls = "+memory";
+	char *controls = "+memory +pids";
 	int result = write_file(CGROUP_ROOT "/cgroup.subtree_control", controls,
 				strlen(controls));
 	if (result < 0) {
@@ -57,6 +58,18 @@ int init_cgroup(pid_t pid)
 	n = snprintf(proc_path, proc_path_size, "%s/cgroup.procs", root_path);
 	if (n < 0 || (size_t)n >= proc_path_size) {
 		perror("failed to construct proc path");
+		return 1;
+	}
+	char pids_path[400];
+	size_t pids_path_size = sizeof(pids_path);
+	n = snprintf(pids_path, pids_path_size, "%s/pids.max", root_path);
+	if (n < 0 || (size_t)n >= pids_path_size) {
+		perror("failed to construct pids path");
+		return 1;
+	}
+	result = write_file(pids_path, MAX_PIDS, strlen(MAX_PIDS));
+	if (result < 0) {
+		perror("failed to write max pids");
 		return 1;
 	}
 	char pid_str[16];
