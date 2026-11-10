@@ -6,9 +6,10 @@
 #define CGROUP_ROOT "/sys/fs/cgroup"
 #define MAX_MEMORY  "67108864"
 #define MAX_PIDS    "128"
+#define MAX_CPU	    "50000 100000"
 int init_cgroup(pid_t pid)
 {
-	char *controls = "+memory +pids";
+	char *controls = "+memory +pids +cpu";
 	int result = write_file(CGROUP_ROOT "/cgroup.subtree_control", controls,
 				strlen(controls));
 	if (result < 0) {
@@ -70,6 +71,18 @@ int init_cgroup(pid_t pid)
 	result = write_file(pids_path, MAX_PIDS, strlen(MAX_PIDS));
 	if (result < 0) {
 		perror("failed to write max pids");
+		return 1;
+	}
+	char cpu_path[400];
+	size_t cpu_path_size = sizeof(cpu_path);
+	n = snprintf(cpu_path, cpu_path_size, "%s/cpu.max", root_path);
+	if (n < 0 || (size_t)n >= cpu_path_size) {
+		perror("failed to construct cpu path");
+		return 1;
+	}
+	result = write_file(cpu_path, MAX_CPU, strlen(MAX_CPU));
+	if (result < 0) {
+		perror("failed to set max cpu");
 		return 1;
 	}
 	char pid_str[16];
