@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 	}
 	result = init_netns(pid);
 	if (result != 0) {
-		perror("initializing cgroup");
+		perror("initializing network namespace");
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		cleanup_cgroup(pid);
