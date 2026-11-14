@@ -10,11 +10,13 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include "parser.h"
 #include "config.h"
 #include "container.h"
 #include "cgroup.h"
 #include "netns.h"
+#include "nuc_error.h"
 #define STACK_SIZE (1024 * 1024)
 
 int main(int argc, char *argv[])
@@ -24,18 +26,18 @@ int main(int argc, char *argv[])
 	Config conf;
 	int rs = parse(argc, argv, &hostname, &root_fs);
 	if (rs == -1) {
-		printf("parse failed");
+		nuc_err_report("parse", errno);
 		return 1;
 	}
 	rs = setup_config(&conf, &hostname, &root_fs);
 	if (rs == -1) {
-		printf("setup config failed");
+		nuc_err_report("setup config", errno);
 		return 1;
 	}
 	signal(SIGPIPE, SIG_IGN);
 	char *stack = malloc(STACK_SIZE);
 	if (!stack) {
-		perror("malloc failed for stack");
+		nuc_err_report("malloc", errno);
 		return 1;
 	}
 	char *stack_top = stack + STACK_SIZE;
@@ -43,13 +45,13 @@ int main(int argc, char *argv[])
 		    CLONE_NEWNET;
 
 	if (pipe2(conf.sync_fd, O_CLOEXEC) == -1) {
-		perror("pipe for fd");
+		nuc_err_report("pipe2", errno);
 		return 1;
 	}
 
 	pid_t pid = clone(container, stack_top, flags, &conf);
 	if (pid == -1) {
-		perror("failed to clone");
+		nuc_err_report("clone", errno);
 		return 1;
 	}
 	close(conf.sync_fd[0]);

@@ -1,5 +1,7 @@
 #include <string.h>
+#include <errno.h>
 #include "parser.h"
+#include "nuc_error.h"
 int parse(int argc, char *argv[], char **hostname, char **fs)
 {
 	int essential_flags_found = 0;
@@ -17,10 +19,8 @@ int parse(int argc, char *argv[], char **hostname, char **fs)
 		}
 	}
 	if (essential_flags_found == 0) {
+		errno = NUC_E_MISSING_FLAGS;
 		return -1;
-		// fprintf(stderr, "error: -fs flag is essential for mounting "
-		// 		"filesystem\n");
-		// exit(EXIT_FAILURE);
-	}
+		}
 	return 0;
 }

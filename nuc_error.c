@@ -7,6 +7,8 @@ char *err_str(int e)
 	switch (e) {
 	case NUC_E_MISSING_FLAGS:
 		return "missing the necessary flags to start the programm";
+	case NUC_INVALID_ROOTFS_PATH:
+		return "invalid root filesystem path";
 	default:
 		return strerror(e);
 	}
