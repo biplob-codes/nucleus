@@ -1,8 +1,6 @@
 #include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include "parser.h"
-void parse(int argc, char *argv[], char **hostname, char **fs)
+int parse(int argc, char *argv[], char **hostname, char **fs)
 {
 	int essential_flags_found = 0;
 	for (int i = 1; i < argc; i++) {
@@ -19,8 +17,10 @@ void parse(int argc, char *argv[], char **hostname, char **fs)
 		}
 	}
 	if (essential_flags_found == 0) {
-		fprintf(stderr, "error: -fs flag is essential for mounting "
-				"filesystem\n");
-		exit(EXIT_FAILURE);
+		return -1;
+		// fprintf(stderr, "error: -fs flag is essential for mounting "
+		// 		"filesystem\n");
+		// exit(EXIT_FAILURE);
 	}
+	return 0;
 }

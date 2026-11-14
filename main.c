@@ -22,8 +22,16 @@ int main(int argc, char *argv[])
 	char *hostname = NULL;
 	char *root_fs = NULL;
 	Config conf;
-	parse(argc, argv, &hostname, &root_fs);
-	setup_config(&conf, &hostname, &root_fs);
+	int rs = parse(argc, argv, &hostname, &root_fs);
+	if (rs == -1) {
+		printf("parse failed");
+		return 1;
+	}
+	rs = setup_config(&conf, &hostname, &root_fs);
+	if (rs == -1) {
+		printf("setup config failed");
+		return 1;
+	}
 	signal(SIGPIPE, SIG_IGN);
 	char *stack = malloc(STACK_SIZE);
 	if (!stack) {

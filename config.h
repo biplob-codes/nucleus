@@ -6,5 +6,5 @@ typedef struct {
 	char *root_fs;
 	int sync_fd[2];
 } Config;
-void setup_config(Config *conf, char **hostname, char **fs);
+int setup_config(Config *conf, char **hostname, char **fs);
 #endif // CONFIG_H
