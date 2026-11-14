@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 	Config conf;
 	parse(argc, argv, &hostname, &root_fs);
 	setup_config(&conf, &hostname, &root_fs);
+	signal(SIGPIPE, SIG_IGN);
 	char *stack = malloc(STACK_SIZE);
 	if (!stack) {
 		perror("malloc failed for stack");
@@ -43,7 +44,7 @@ int main(int argc, char *argv[])
 		perror("failed to clone");
 		return 1;
 	}
-
+	close(conf.sync_fd[0]);
 	int result = init_cgroup(pid);
 	if (result != 0) {
 		perror("initializing cgroup");
@@ -60,12 +61,12 @@ int main(int argc, char *argv[])
 		cleanup_cgroup(pid);
 		return 1;
 	}
-
 	if (write(conf.sync_fd[1], "x", 1) == -1) {
 		perror("write to fd");
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		cleanup_cgroup(pid);
+		free(stack);
 		return 1;
 	}
 	close(conf.sync_fd[1]);

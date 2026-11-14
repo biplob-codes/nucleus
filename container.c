@@ -17,11 +17,13 @@ int container(void *arg)
 {
 	Config *conf = arg;
 	char buf;
+	close(conf->sync_fd[1]);
+
 	if (read(conf->sync_fd[0], &buf, 1) != 1) {
 		perror("read from fd failed");
 		exit(EXIT_FAILURE);
 	}
-
+	signal(SIGPIPE, SIG_DFL);
 	if (mount("", "/", NULL, MS_REC | MS_PRIVATE, NULL) == -1) {
 		perror("failed to make the child mount table private");
 		return 1;
