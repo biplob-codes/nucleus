@@ -2,17 +2,18 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 #include "utils.h"
 int write_file(char *path, char *what, size_t len)
 {
 	int fd = open(path, O_WRONLY);
-	if (fd == -1) {
-		perror("failed to open the file");
+	if (fd == -1)
 		return -1;
-	}
+
 	if (write(fd, what, len) != (ssize_t)len) {
-		perror("failed to write to file");
+		int save = errno;
 		close(fd);
+		errno = save;
 		return -1;
 	}
 	close(fd);

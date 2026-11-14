@@ -9,6 +9,8 @@ char *err_str(int e)
 		return "missing the necessary flags to start the programm";
 	case NUC_INVALID_ROOTFS_PATH:
 		return "invalid root filesystem path";
+	case NUC_FORMAT_ERR:
+		return "format string failed";
 	default:
 		return strerror(e);
 	}

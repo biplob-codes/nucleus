@@ -56,8 +56,8 @@ int main(int argc, char *argv[])
 	}
 	close(conf.sync_fd[0]);
 	int result = init_cgroup(pid);
-	if (result != 0) {
-		perror("initializing cgroup");
+	if (result == -1) {
+		nuc_err_report("init cgroups", errno);
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		cleanup_cgroup(pid);
@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	if (write(conf.sync_fd[1], "x", 1) == -1) {
-		perror("write to fd");
+		nuc_err_report("write to pipe", errno);
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		cleanup_cgroup(pid);
