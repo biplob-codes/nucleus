@@ -11,6 +11,12 @@
 #define MAX_MEMORY	   "67108864"
 #define MAX_PIDS	   "128"
 #define MAX_CPU		   "50000 100000"
+typedef struct {
+	char *resource;
+	char *limit;
+
+} cgroup;
+
 int cgroup_ctrl_status()
 {
 	char *resources[3] = {"memory", "pids", "cpu"};
@@ -40,6 +46,28 @@ int build_cgroup_ctrl_path(char *buf, size_t size_buf, char *resource,
 	}
 	return 0;
 }
+int set_limits(char *root_path)
+{
+	cgroup cgroup_table[] = {
+		{"memory.max", MAX_MEMORY},
+		{"memory.swap.max", "0"},
+		{"cpu.max", MAX_CPU},
+		{"pids.max", MAX_PIDS},
+		{NULL, NULL},
+	};
+	for (int i = 0; cgroup_table[i].resource != NULL; i++) {
+		char buf[400];
+		int result = build_cgroup_ctrl_path(
+			buf, sizeof(buf), cgroup_table[i].resource, root_path);
+		if (result == -1)
+			return result;
+		result = write_file(buf, cgroup_table[i].limit,
+				    strlen(cgroup_table[i].limit));
+		if (result == -1)
+			return result;
+	}
+	return 0;
+}
 int init_cgroup(pid_t pid)
 {
 	int result = mkdir(CGROUP_ROOT, 0755);
@@ -54,6 +82,7 @@ int init_cgroup(pid_t pid)
 			    strlen(controls));
 	if (result == -1)
 		return result;
+
 	char root_path[300];
 	size_t root_path_size = sizeof(root_path);
 	int n = snprintf(root_path, sizeof(root_path), CGROUP_ROOT "/nuc-%d",
@@ -64,40 +93,10 @@ int init_cgroup(pid_t pid)
 	}
 	if (mkdir(root_path, 0755) == -1)
 		return -1;
-
-	char memory_path[400];
-	result = build_cgroup_ctrl_path(memory_path, sizeof(memory_path),
-					"memory.max", root_path);
-	if (result == -1)
-		return result;
-	result = write_file(memory_path, MAX_MEMORY, strlen(MAX_MEMORY));
-	if (result == -1)
-		return result;
-	char swap_path[400];
-	result = build_cgroup_ctrl_path(swap_path, sizeof(swap_path),
-					"memory.swap.max", root_path);
-	if (result == -1)
-		return result;
-	result = write_file(swap_path, "0", strlen("0"));
+	result = set_limits(root_path);
 	if (result == -1)
 		return result;
 
-	char pids_path[400];
-	result = build_cgroup_ctrl_path(pids_path, sizeof(pids_path),
-					"pids.max", root_path);
-	if (result == -1)
-		return result;
-	result = write_file(pids_path, MAX_PIDS, strlen(MAX_PIDS));
-	if (result == -1)
-		return result;
-	char cpu_path[400];
-	result = build_cgroup_ctrl_path(cpu_path, sizeof(cpu_path), "cpu.max",
-					root_path);
-	if (result == -1)
-		return result;
-	result = write_file(cpu_path, MAX_CPU, strlen(MAX_CPU));
-	if (result == -1)
-		return result;
 	char pid_str[16];
 	size_t pid_str_size = sizeof(pid_str);
 	n = snprintf(pid_str, pid_str_size, "%d", pid);
