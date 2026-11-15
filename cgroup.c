@@ -30,6 +30,16 @@ int cgroup_ctrl_status()
 	}
 	return 0;
 }
+int build_cgroup_ctrl_path(char *buf, size_t size_buf, char *resource,
+			   char *root_path)
+{
+	int n = snprintf(buf, size_buf, "%s/%s", root_path, resource);
+	if (n < 0 || (size_t)n >= size_buf) {
+		errno = NUC_FORMAT_ERR;
+		return -1;
+	}
+	return 0;
+}
 int init_cgroup(pid_t pid)
 {
 	int result = mkdir(CGROUP_ROOT, 0755);
@@ -56,52 +66,35 @@ int init_cgroup(pid_t pid)
 		return -1;
 
 	char memory_path[400];
-	size_t memory_path_size = sizeof(memory_path);
-
-	n = snprintf(memory_path, memory_path_size, "%s/memory.max", root_path);
-	if (n < 0 || (size_t)n >= memory_path_size) {
-		errno = NUC_FORMAT_ERR;
-		return -1;
-	}
+	result = build_cgroup_ctrl_path(memory_path, sizeof(memory_path),
+					"memory.max", root_path);
+	if (result == -1)
+		return result;
 	result = write_file(memory_path, MAX_MEMORY, strlen(MAX_MEMORY));
 	if (result == -1)
 		return result;
 	char swap_path[400];
-	size_t swap_path_size = sizeof(swap_path);
-	n = snprintf(swap_path, swap_path_size, "%s/memory.swap.max",
-		     root_path);
-	if (n < 0 || (size_t)n >= swap_path_size) {
-		errno = NUC_FORMAT_ERR;
-		return -1;
-	}
+	result = build_cgroup_ctrl_path(swap_path, sizeof(swap_path),
+					"memory.swap.max", root_path);
+	if (result == -1)
+		return result;
 	result = write_file(swap_path, "0", strlen("0"));
 	if (result == -1)
 		return result;
-	char proc_path[400];
-	size_t proc_path_size = sizeof(proc_path);
-	n = snprintf(proc_path, proc_path_size, "%s/cgroup.procs", root_path);
-	if (n < 0 || (size_t)n >= proc_path_size) {
-		errno = NUC_FORMAT_ERR;
-		return -1;
-	}
+
 	char pids_path[400];
-	size_t pids_path_size = sizeof(pids_path);
-	n = snprintf(pids_path, pids_path_size, "%s/pids.max", root_path);
-	if (n < 0 || (size_t)n >= pids_path_size) {
-		errno = NUC_FORMAT_ERR;
-		return -1;
-		;
-	}
+	result = build_cgroup_ctrl_path(pids_path, sizeof(pids_path),
+					"pids.max", root_path);
+	if (result == -1)
+		return result;
 	result = write_file(pids_path, MAX_PIDS, strlen(MAX_PIDS));
 	if (result == -1)
 		return result;
 	char cpu_path[400];
-	size_t cpu_path_size = sizeof(cpu_path);
-	n = snprintf(cpu_path, cpu_path_size, "%s/cpu.max", root_path);
-	if (n < 0 || (size_t)n >= cpu_path_size) {
-		errno = NUC_FORMAT_ERR;
-		return -1;
-	}
+	result = build_cgroup_ctrl_path(cpu_path, sizeof(cpu_path), "cpu.max",
+					root_path);
+	if (result == -1)
+		return result;
 	result = write_file(cpu_path, MAX_CPU, strlen(MAX_CPU));
 	if (result == -1)
 		return result;
@@ -112,6 +105,11 @@ int init_cgroup(pid_t pid)
 		errno = NUC_FORMAT_ERR;
 		return -1;
 	}
+	char proc_path[400];
+	result = build_cgroup_ctrl_path(proc_path, sizeof(proc_path),
+					"cgroup.procs", root_path);
+	if (result == -1)
+		return result;
 	result = write_file(proc_path, pid_str, strlen(pid_str));
 	if (result == -1)
 		return result;
