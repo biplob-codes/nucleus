@@ -11,6 +11,8 @@ char *err_str(int e)
 		return "invalid root filesystem path";
 	case NUC_FORMAT_ERR:
 		return "format string failed";
+	case NUC_CGROUP_CTRL_ERR:
+		return "necessary cgroup controllers not enabled";
 	default:
 		return strerror(e);
 	}

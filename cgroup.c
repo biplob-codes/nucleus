@@ -11,13 +11,34 @@
 #define MAX_MEMORY	   "67108864"
 #define MAX_PIDS	   "128"
 #define MAX_CPU		   "50000 100000"
-
+int cgroup_ctrl_status()
+{
+	char *resources[3] = {"memory", "pids", "cpu"};
+	FILE *f = fopen(CGROUP_CONTROLLERS, "rb");
+	if (!f) {
+		return -1;
+	}
+	char buf[256];
+	size_t n = fread(buf, 1, (sizeof(buf) - 1), f);
+	buf[n] = '\0';
+	fclose(f);
+	for (int i = 0; i < 3; i++) {
+		if (!strstr(buf, resources[i])) {
+			errno = NUC_CGROUP_CTRL_ERR;
+			return -1;
+		}
+	}
+	return 0;
+}
 int init_cgroup(pid_t pid)
 {
 	int result = mkdir(CGROUP_ROOT, 0755);
 	if (result == -1 && errno != EEXIST) {
 		return -1;
 	}
+	result = cgroup_ctrl_status();
+	if (result == -1)
+		return result;
 	char *controls = "+memory +pids +cpu";
 	result = write_file(CGROUP_ROOT "/cgroup.subtree_control", controls,
 			    strlen(controls));

@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		cleanup_cgroup(pid);
+		free(stack);
 		return 1;
 	}
 	result = init_netns(pid);
