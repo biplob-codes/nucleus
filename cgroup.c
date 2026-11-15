@@ -6,21 +6,27 @@
 #include <errno.h>
 #include "utils.h"
 #include "nuc_error.h"
-#define CGROUP_ROOT "/sys/fs/cgroup"
-#define MAX_MEMORY  "67108864"
-#define MAX_PIDS    "128"
-#define MAX_CPU	    "50000 100000"
+#define CGROUP_ROOT	   "/sys/fs/cgroup/nucleus"
+#define CGROUP_CONTROLLERS "/sys/fs/cgroup/nucleus/cgroup.controllers"
+#define MAX_MEMORY	   "67108864"
+#define MAX_PIDS	   "128"
+#define MAX_CPU		   "50000 100000"
+
 int init_cgroup(pid_t pid)
 {
+	int result = mkdir(CGROUP_ROOT, 0755);
+	if (result == -1 && errno != EEXIST) {
+		return -1;
+	}
 	char *controls = "+memory +pids +cpu";
-	int result = write_file(CGROUP_ROOT "/cgroup.subtree_control", controls,
-				strlen(controls));
+	result = write_file(CGROUP_ROOT "/cgroup.subtree_control", controls,
+			    strlen(controls));
 	if (result == -1)
 		return result;
 	char root_path[300];
 	size_t root_path_size = sizeof(root_path);
-	int n = snprintf(root_path, sizeof(root_path),
-			 CGROUP_ROOT "/nucleus-%d", pid);
+	int n = snprintf(root_path, sizeof(root_path), CGROUP_ROOT "/nuc-%d",
+			 pid);
 	if (n < 0 || (size_t)n >= root_path_size) {
 		errno = NUC_FORMAT_ERR;
 		return -1;
@@ -94,7 +100,7 @@ void cleanup_cgroup(pid_t pid)
 {
 	char cg_path[400];
 	size_t cg_path_size = sizeof(cg_path);
-	int n = snprintf(cg_path, cg_path_size, CGROUP_ROOT "/nucleus-%d", pid);
+	int n = snprintf(cg_path, cg_path_size, CGROUP_ROOT "/nuc-%d", pid);
 	if (n < 0 || (size_t)n >= cg_path_size) {
 		fprintf(stderr, "failed to construct cgroup path");
 	}
