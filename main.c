@@ -46,34 +46,29 @@ int main(int argc, char *argv[])
 
 	if (pipe2(conf.sync_fd, O_CLOEXEC) == -1) {
 		nuc_err_report("pipe2", errno);
-		return 1;
+		goto free_stack;
 	}
 
 	pid_t pid = clone(container, stack_top, flags, &conf);
 	if (pid == -1) {
 		nuc_err_report("clone", errno);
-		return 1;
+		goto close_fd;
 	}
 	close(conf.sync_fd[0]);
 	int result = init_cgroup(pid);
 	if (result == -1) {
 		nuc_err_report("init cgroups", errno);
-		kill(pid, SIGKILL);
-		waitpid(pid, NULL, 0);
-		cleanup_cgroup(pid);
-		free(stack);
-		return 1;
+		goto kill_child;
 	}
+	// TODO: clean netns when rewriting it.
 	result = init_netns(pid);
 	if (result != 0) {
 		perror("initializing network namespace");
-		kill(pid, SIGKILL);
-		waitpid(pid, NULL, 0);
-		cleanup_cgroup(pid);
-		return 1;
+		goto kill_child;
 	}
 	if (write(conf.sync_fd[1], "x", 1) == -1) {
 		nuc_err_report("write to pipe", errno);
+		goto kill_child;
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		cleanup_cgroup(pid);
@@ -90,4 +85,13 @@ int main(int argc, char *argv[])
 
 	if (WIFSIGNALED(status))
 		return (WTERMSIG(status) + 128);
+kill_child:
+	kill(pid, SIGKILL);
+	waitpid(pid, NULL, 0);
+close_fd:
+	close(conf.sync_fd[0]);
+	close(conf.sync_fd[1]);
+free_stack:
+	free(stack);
+	return 1;
 }

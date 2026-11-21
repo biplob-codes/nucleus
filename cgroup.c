@@ -76,12 +76,12 @@ int init_cgroup(pid_t pid)
 	}
 	result = cgroup_ctrl_status();
 	if (result == -1)
-		return result;
+		goto delete_cgroup_dir;
 	char *controls = "+memory +pids +cpu";
 	result = write_file(CGROUP_ROOT "/cgroup.subtree_control", controls,
 			    strlen(controls));
 	if (result == -1)
-		return result;
+		goto delete_cgroup_dir;
 
 	char root_path[300];
 	size_t root_path_size = sizeof(root_path);
@@ -89,30 +89,35 @@ int init_cgroup(pid_t pid)
 			 pid);
 	if (n < 0 || (size_t)n >= root_path_size) {
 		errno = NUC_FORMAT_ERR;
-		return -1;
+		goto delete_cgroup_dir;
 	}
 	if (mkdir(root_path, 0755) == -1)
-		return -1;
+		goto delete_cgroup_dir;
 	result = set_limits(root_path);
 	if (result == -1)
-		return result;
+		goto delete_root_path;
 
 	char pid_str[16];
 	size_t pid_str_size = sizeof(pid_str);
 	n = snprintf(pid_str, pid_str_size, "%d", pid);
 	if (n < 0 || (size_t)n >= pid_str_size) {
 		errno = NUC_FORMAT_ERR;
-		return -1;
+		goto delete_root_path;
 	}
 	char proc_path[400];
 	result = build_cgroup_ctrl_path(proc_path, sizeof(proc_path),
 					"cgroup.procs", root_path);
 	if (result == -1)
-		return result;
+		goto delete_root_path;
 	result = write_file(proc_path, pid_str, strlen(pid_str));
 	if (result == -1)
-		return result;
+		goto delete_root_path;
 	return 0;
+delete_root_path:
+	rmdir(root_path);
+delete_cgroup_dir:
+	rmdir(CGROUP_ROOT);
+	return -1;
 }
 void cleanup_cgroup(pid_t pid)
 {
