@@ -6,6 +6,7 @@
 #include <errno.h>
 #include "utils.h"
 #include "nuc_error.h"
+#include "cgroup.h"
 #define CGROUP_ROOT	   "/sys/fs/cgroup/nucleus"
 #define CGROUP_CONTROLLERS "/sys/fs/cgroup/nucleus/cgroup.controllers"
 #define MAX_MEMORY	   "67108864"
@@ -68,20 +69,21 @@ int set_limits(char *root_path)
 	}
 	return 0;
 }
-int init_cgroup(pid_t pid)
+int init_cgroup(pid_t pid, ledger *ld)
 {
 	int result = mkdir(CGROUP_ROOT, 0755);
 	if (result == -1 && errno != EEXIST) {
 		return -1;
 	}
+	strcpy(ld->root_cgroup_dir, CGROUP_ROOT);
 	result = cgroup_ctrl_status();
 	if (result == -1)
-		goto delete_cgroup_dir;
+		return result;
 	char *controls = "+memory +pids +cpu";
 	result = write_file(CGROUP_ROOT "/cgroup.subtree_control", controls,
 			    strlen(controls));
 	if (result == -1)
-		goto delete_cgroup_dir;
+		return result;
 
 	char root_path[300];
 	size_t root_path_size = sizeof(root_path);
@@ -89,35 +91,31 @@ int init_cgroup(pid_t pid)
 			 pid);
 	if (n < 0 || (size_t)n >= root_path_size) {
 		errno = NUC_FORMAT_ERR;
-		goto delete_cgroup_dir;
+		return -1;
 	}
 	if (mkdir(root_path, 0755) == -1)
-		goto delete_cgroup_dir;
+		return -1;
+	strcpy(ld->container_cgroup_dir, root_path);
 	result = set_limits(root_path);
 	if (result == -1)
-		goto delete_root_path;
+		return result;
 
 	char pid_str[16];
 	size_t pid_str_size = sizeof(pid_str);
 	n = snprintf(pid_str, pid_str_size, "%d", pid);
 	if (n < 0 || (size_t)n >= pid_str_size) {
 		errno = NUC_FORMAT_ERR;
-		goto delete_root_path;
+		return -1;
 	}
 	char proc_path[400];
 	result = build_cgroup_ctrl_path(proc_path, sizeof(proc_path),
 					"cgroup.procs", root_path);
 	if (result == -1)
-		goto delete_root_path;
+		return result;
 	result = write_file(proc_path, pid_str, strlen(pid_str));
 	if (result == -1)
-		goto delete_root_path;
+		return result;
 	return 0;
-delete_root_path:
-	rmdir(root_path);
-delete_cgroup_dir:
-	rmdir(CGROUP_ROOT);
-	return -1;
 }
 void cleanup_cgroup(pid_t pid)
 {

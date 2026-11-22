@@ -18,9 +18,29 @@
 #include "netns.h"
 #include "nuc_error.h"
 #define STACK_SIZE (1024 * 1024)
+void clean_up(ledger *ld)
+{
 
+	if (ld->container_cgroup_dir[0] != '\0') {
+		rmdir(ld->container_cgroup_dir);
+	}
+	if (ld->root_cgroup_dir[0] != '\0') {
+		rmdir(ld->root_cgroup_dir);
+	}
+	if (ld->sync_fd[0] != -1) {
+		close(ld->sync_fd[0]);
+		ld->sync_fd[0] = -1;
+	}
+	if (ld->sync_fd[1] != -1) {
+		close(ld->sync_fd[1]);
+		ld->sync_fd[1] = -1;
+	}
+	if (ld->stack != NULL)
+		free(ld->stack);
+}
 int main(int argc, char *argv[])
 {
+	ledger ld = {NULL, {-1, -1}, {0}, {0}};
 	char *hostname = NULL;
 	char *root_fs = NULL;
 	Config conf;
@@ -40,58 +60,55 @@ int main(int argc, char *argv[])
 		nuc_err_report("malloc", errno);
 		return 1;
 	}
+	ld.stack = stack;
 	char *stack_top = stack + STACK_SIZE;
 	int flags = CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWNS | SIGCHLD |
 		    CLONE_NEWNET;
 
 	if (pipe2(conf.sync_fd, O_CLOEXEC) == -1) {
 		nuc_err_report("pipe2", errno);
-		goto free_stack;
+		goto clean;
 	}
-
+	ld.sync_fd[0] = conf.sync_fd[0];
+	ld.sync_fd[1] = conf.sync_fd[1];
 	pid_t pid = clone(container, stack_top, flags, &conf);
 	if (pid == -1) {
 		nuc_err_report("clone", errno);
-		goto close_fd;
+		goto clean;
 	}
 	close(conf.sync_fd[0]);
-	int result = init_cgroup(pid);
+	conf.sync_fd[0] = -1;
+	int result = init_cgroup(pid, &ld);
 	if (result == -1) {
 		nuc_err_report("init cgroups", errno);
-		goto kill_child;
+		kill(pid, SIGKILL);
+		waitpid(pid, NULL, 0);
+		goto clean;
 	}
 	// TODO: clean netns when rewriting it.
 	result = init_netns(pid);
 	if (result != 0) {
 		perror("initializing network namespace");
-		goto kill_child;
+		kill(pid, SIGKILL);
+		waitpid(pid, NULL, 0);
+		goto clean;
 	}
 	if (write(conf.sync_fd[1], "x", 1) == -1) {
 		nuc_err_report("write to pipe", errno);
-		goto kill_child;
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
-		cleanup_cgroup(pid);
-		free(stack);
-		return 1;
+		goto clean;
 	}
 	close(conf.sync_fd[1]);
 	int status;
 	waitpid(pid, &status, 0);
-	free(stack);
-	cleanup_cgroup(pid);
+	clean_up(&ld);
 	if (WIFEXITED(status))
 		return WEXITSTATUS(status);
 
 	if (WIFSIGNALED(status))
 		return (WTERMSIG(status) + 128);
-kill_child:
-	kill(pid, SIGKILL);
-	waitpid(pid, NULL, 0);
-close_fd:
-	close(conf.sync_fd[0]);
-	close(conf.sync_fd[1]);
-free_stack:
-	free(stack);
+clean:
+	clean_up(&ld);
 	return 1;
 }
