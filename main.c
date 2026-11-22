@@ -17,27 +17,8 @@
 #include "cgroup.h"
 #include "netns.h"
 #include "nuc_error.h"
+#include "ledger.h"
 #define STACK_SIZE (1024 * 1024)
-void clean_up(ledger *ld)
-{
-
-	if (ld->container_cgroup_dir[0] != '\0') {
-		rmdir(ld->container_cgroup_dir);
-	}
-	if (ld->root_cgroup_dir[0] != '\0') {
-		rmdir(ld->root_cgroup_dir);
-	}
-	if (ld->sync_fd[0] != -1) {
-		close(ld->sync_fd[0]);
-		ld->sync_fd[0] = -1;
-	}
-	if (ld->sync_fd[1] != -1) {
-		close(ld->sync_fd[1]);
-		ld->sync_fd[1] = -1;
-	}
-	if (ld->stack != NULL)
-		free(ld->stack);
-}
 int main(int argc, char *argv[])
 {
 	ledger ld = {NULL, {-1, -1}, {0}, {0}};
