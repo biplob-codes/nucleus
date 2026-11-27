@@ -21,16 +21,19 @@
 #define STACK_SIZE (1024 * 1024)
 int main(int argc, char *argv[])
 {
-	ledger ld = {NULL, {-1, -1}, {0}, {0}};
+	typedef struct {
+		Config conf;
+		ledger ld;
+	} ctx_struct;
+	ctx_struct ctx = {.ld = {NULL, {-1, -1}, {0}, {0}}};
 	char *hostname = NULL;
 	char *root_fs = NULL;
-	Config conf;
 	int rs = parse(argc, argv, &hostname, &root_fs);
 	if (rs == -1) {
 		nuc_err_report("parse", errno);
 		return 1;
 	}
-	rs = setup_config(&conf, &hostname, &root_fs);
+	rs = setup_config(&ctx.conf, &hostname, &root_fs);
 	if (rs == -1) {
 		nuc_err_report("setup config", errno);
 		return 1;
@@ -41,25 +44,23 @@ int main(int argc, char *argv[])
 		nuc_err_report("malloc", errno);
 		return 1;
 	}
-	ld.stack = stack;
+	ctx.ld.stack = stack;
 	char *stack_top = stack + STACK_SIZE;
 	int flags = CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWNS | SIGCHLD |
 		    CLONE_NEWNET;
 
-	if (pipe2(conf.sync_fd, O_CLOEXEC) == -1) {
+	if (pipe2(ctx.ld.sync_fd, O_CLOEXEC) == -1) {
 		nuc_err_report("pipe2", errno);
 		goto clean;
 	}
-	ld.sync_fd[0] = conf.sync_fd[0];
-	ld.sync_fd[1] = conf.sync_fd[1];
-	pid_t pid = clone(container, stack_top, flags, &conf);
+	pid_t pid = clone(container, stack_top, flags, &ctx);
 	if (pid == -1) {
 		nuc_err_report("clone", errno);
 		goto clean;
 	}
-	close(conf.sync_fd[0]);
-	conf.sync_fd[0] = -1;
-	int result = init_cgroup(pid, &ld);
+	close(ctx.ld.sync_fd[0]);
+	ctx.ld.sync_fd[0] = -1;
+	int result = init_cgroup(pid, &ctx.ld);
 	if (result == -1) {
 		nuc_err_report("init cgroups", errno);
 		kill(pid, SIGKILL);
@@ -74,22 +75,23 @@ int main(int argc, char *argv[])
 		waitpid(pid, NULL, 0);
 		goto clean;
 	}
-	if (write(conf.sync_fd[1], "x", 1) == -1) {
+	if (write(ctx.ld.sync_fd[1], "x", 1) == -1) {
 		nuc_err_report("write to pipe", errno);
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		goto clean;
 	}
-	close(conf.sync_fd[1]);
+	close(ctx.ld.sync_fd[1]);
+	ctx.ld.sync_fd[1] = -1;
 	int status;
 	waitpid(pid, &status, 0);
-	clean_up(&ld);
+	clean_up(&ctx.ld);
 	if (WIFEXITED(status))
 		return WEXITSTATUS(status);
 
 	if (WIFSIGNALED(status))
 		return (WTERMSIG(status) + 128);
 clean:
-	clean_up(&ld);
+	clean_up(&ctx.ld);
 	return 1;
 }

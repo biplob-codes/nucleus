@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "config.h"
+#include "ledger.h"
 #include "nuc_error.h"
 int pivot_root(const char *new_root, const char *put_old)
 {
@@ -16,11 +17,16 @@ int pivot_root(const char *new_root, const char *put_old)
 }
 int container(void *arg)
 {
-	Config *conf = arg;
+	typedef struct {
+		Config conf;
+		ledger ld;
+	} ctx_struct;
+	ctx_struct *ctx = arg;
 	char buf;
-	close(conf->sync_fd[1]);
+	close(ctx->ld.sync_fd[1]);
+	ctx->ld.sync_fd[1] = -1;
 
-	if (read(conf->sync_fd[0], &buf, 1) != 1) {
+	if (read(ctx->ld.sync_fd[0], &buf, 1) != 1) {
 		nuc_err_report("read from pipe", errno);
 		_exit(125);
 	}
@@ -30,16 +36,16 @@ int container(void *arg)
 		_exit(125);
 	}
 	char *olddir = "/olddir";
-	char *old_fs = malloc(strlen(conf->root_fs) + strlen(olddir) + 1);
+	char *old_fs = malloc(strlen(ctx->conf.root_fs) + strlen(olddir) + 1);
 	if (old_fs == NULL) {
 		nuc_err_report("malloc container", errno);
 		_exit(125);
 	}
-	strcpy(old_fs, conf->root_fs);
+	strcpy(old_fs, ctx->conf.root_fs);
 	strcat(old_fs, olddir);
 
-	if (mount(conf->root_fs, conf->root_fs, NULL, MS_BIND | MS_REC, 0) ==
-	    -1) {
+	if (mount(ctx->conf.root_fs, ctx->conf.root_fs, NULL, MS_BIND | MS_REC,
+		  0) == -1) {
 		nuc_err_report("bind rootfs", errno);
 		_exit(125);
 	}
@@ -50,7 +56,7 @@ int container(void *arg)
 		}
 	}
 
-	if (pivot_root(conf->root_fs, old_fs) == -1) {
+	if (pivot_root(ctx->conf.root_fs, old_fs) == -1) {
 		nuc_err_report("mount new rootfs", errno);
 		_exit(125);
 	}
@@ -72,8 +78,8 @@ int container(void *arg)
 		nuc_err_report("remove olddir", errno);
 		_exit(125);
 	}
-	size_t len = strlen(conf->hostname);
-	if (sethostname(conf->hostname, len) == -1) {
+	size_t len = strlen(ctx->conf.hostname);
+	if (sethostname(ctx->conf.hostname, len) == -1) {
 		nuc_err_report("sethostname", errno);
 		_exit(125);
 	}
