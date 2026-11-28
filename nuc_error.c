@@ -13,6 +13,8 @@ char *err_str(int e)
 		return "format string failed";
 	case NUC_CGROUP_CTRL_ERR:
 		return "necessary cgroup controllers not enabled";
+	case NUC_HOST_NAME_ERR:
+		return "hostname exceeds the max limit";
 	default:
 		return strerror(e);
 	}
