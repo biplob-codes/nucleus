@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 	// TODO: clean netns when rewriting it.
 	result = init_netns(pid, &ctx.ld);
 	if (result != 0) {
-		perror("initializing network namespace");
+		nuc_err_report("initializing network namespace", errno);
 		kill(pid, SIGKILL);
 		waitpid(pid, NULL, 0);
 		goto clean;

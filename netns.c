@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include "netns.h"
+#include "nuc_error.h"
 #define VETH_HOST_CIDR	     "12.200.1.1/24"
 #define VETH_HOST_IP	     "12.200.1.1"
 #define VETH_CONTAINER_IP    "12.200.1.2/24"
@@ -20,7 +22,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 container_veth);
 	int r = system(create_veth);
 	if (r != 0) {
-		perror("create veth failed");
+		errno = NUC_VETH_PAIR_ERR;
 		return -1;
 	}
 	strcpy(ld->host_side_veth, VETH_HOST_IFACE);
@@ -29,7 +31,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 "ip link set %s netns %d", container_veth, pid);
 	r = system(set_namespace);
 	if (r != 0) {
-		perror("set namespace for veth failed");
+		errno = NUC_SET_NS_ERR;
 		return -1;
 	}
 
@@ -38,7 +40,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 VETH_HOST_IP, VETH_HOST_IFACE);
 	r = system(set_host_ip);
 	if (r != 0) {
-		perror("set host ip failed");
+		errno = NUC_SET_VETH_IP_ERR;
 		return -1;
 	}
 
@@ -48,7 +50,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 VETH_CONTAINER_IP, container_veth);
 	r = system(set_container_ip);
 	if (r != 0) {
-		perror("set child ip failed");
+		errno = NUC_SET_VETH_IP_ERR;
 		return -1;
 	}
 
@@ -57,7 +59,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 "ip link set %s up", VETH_HOST_IFACE);
 	r = system(active_host_interface);
 	if (r != 0) {
-		perror("activate host interface failed");
+		errno = NUC_SET_VETH_IP_UP_ERR;
 		return -1;
 	}
 
@@ -68,7 +70,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 pid, container_veth, pid);
 	r = system(active_container_interface);
 	if (r != 0) {
-		perror("active container interface failed");
+		errno = NUC_SET_VETH_IP_UP_ERR;
 		return -1;
 	}
 
@@ -78,7 +80,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 pid, VETH_HOST_IP);
 	r = system(add_default_gateway);
 	if (r != 0) {
-		perror("default gateway failed");
+		errno = NUC_SET_DEF_GATEWAY_ERR;
 		return -1;
 	}
 
@@ -94,7 +96,7 @@ int init_netns(pid_t pid, ledger *ld)
 	char forward_port[] = "sysctl -w net.ipv4.ip_forward=1";
 	r = system(forward_port);
 	if (r != 0) {
-		perror("port forward fail");
+		errno = NUC_SET_IP_FRWRD_ERR;
 		return 1;
 	}
 	ld->org_ip_frwrd_v = org_val;
@@ -106,7 +108,7 @@ int init_netns(pid_t pid, ledger *ld)
 		 VETH_HOST_CIDR);
 	r = system(forward_nat);
 	if (r != 0) {
-		perror("nat forward fail");
+		errno = NUC_SET_NAT_RULE_ERR;
 		return 1;
 	}
 	return 0;

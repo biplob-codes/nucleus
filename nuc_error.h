@@ -6,6 +6,13 @@ enum nuc_error {
 	NUC_FORMAT_ERR,
 	NUC_CGROUP_CTRL_ERR,
 	NUC_HOST_NAME_ERR,
+	NUC_VETH_PAIR_ERR,
+	NUC_SET_NS_ERR,
+	NUC_SET_VETH_IP_ERR,
+	NUC_SET_VETH_IP_UP_ERR,
+	NUC_SET_DEF_GATEWAY_ERR,
+	NUC_SET_IP_FRWRD_ERR,
+	NUC_SET_NAT_RULE_ERR,
 };
 char *err_str(int e);
 void nuc_err_report(char *step, int e);

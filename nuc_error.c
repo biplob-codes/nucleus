@@ -15,6 +15,20 @@ char *err_str(int e)
 		return "necessary cgroup controllers not enabled";
 	case NUC_HOST_NAME_ERR:
 		return "hostname exceeds the max limit";
+	case NUC_VETH_PAIR_ERR:
+		return "could not create veth pair";
+	case NUC_SET_NS_ERR:
+		return "could not set namespace for veth pair";
+	case NUC_SET_VETH_IP_ERR:
+		return "could not set ip addr to veth pair";
+	case NUC_SET_VETH_IP_UP_ERR:
+		return "could not turn up veth pair ip";
+	case NUC_SET_DEF_GATEWAY_ERR:
+		return "failed to set default gateway";
+	case NUC_SET_IP_FRWRD_ERR:
+		return "could not set ip forward";
+	case NUC_SET_NAT_RULE_ERR:
+		return "could not set nat rule";
 	default:
 		return strerror(e);
 	}
