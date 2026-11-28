@@ -6,6 +6,7 @@ typedef struct {
 	char root_cgroup_dir[300];
 	char container_cgroup_dir[300];
 	char host_side_veth[100];
+	int org_ip_frwrd_v;
 } ledger;
 void clean_up(ledger *ld);
 #endif // LEDGER_H

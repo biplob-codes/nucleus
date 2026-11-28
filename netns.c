@@ -82,12 +82,22 @@ int init_netns(pid_t pid, ledger *ld)
 		return -1;
 	}
 
+	FILE *fp = fopen("/proc/sys/net/ipv4/ip_forward", "r");
+	if (fp == NULL)
+		return -1;
+	int org_val;
+	if (fscanf(fp, "%d", &org_val) != 1) {
+		fclose(fp);
+		return -1;
+	}
+
 	char forward_port[] = "sysctl -w net.ipv4.ip_forward=1";
 	r = system(forward_port);
 	if (r != 0) {
 		perror("port forward fail");
 		return 1;
 	}
+	ld->org_ip_frwrd_v = org_val;
 	// TODO: create a fn that will give you the interface for the host
 	// machine
 	char forward_nat[256];

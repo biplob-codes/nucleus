@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
 		Config conf;
 		ledger ld;
 	} ctx_struct;
-	ctx_struct ctx = {.ld = {NULL, {-1, -1}, {0}, {0}, {0}}};
+	ctx_struct ctx = {.ld = {NULL, {-1, -1}, {0}, {0}, {0}, -1}};
 	char *hostname = NULL;
 	char *root_fs = NULL;
 	int rs = parse(argc, argv, &hostname, &root_fs);

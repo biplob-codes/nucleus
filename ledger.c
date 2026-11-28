@@ -4,6 +4,12 @@
 #include <stdio.h>
 void clean_up(ledger *ld)
 {
+	if (ld->org_ip_frwrd_v != -1) {
+		char buf[256];
+		snprintf(buf, sizeof(buf), "sysctl -w net.ipv4.ip_forward=%d",
+			 ld->org_ip_frwrd_v);
+		system(buf);
+	}
 	if (ld->host_side_veth[0] != '\0') {
 		char buf[256];
 		snprintf(buf, sizeof(buf), "ip link delete %s",
