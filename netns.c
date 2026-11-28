@@ -1,12 +1,14 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include "netns.h"
 #define VETH_HOST_CIDR	     "12.200.1.1/24"
 #define VETH_HOST_IP	     "12.200.1.1"
 #define VETH_CONTAINER_IP    "12.200.1.2/24"
 #define VETH_SUBNET	     "12.200.1.0/24"
 #define VETH_HOST_IFACE	     "nuc-vh"
 #define VETH_CONTAINER_IFACE "nuc-vc"
-int init_netns(pid_t pid)
+int init_netns(pid_t pid, ledger *ld)
 {
 	char container_veth[56];
 	snprintf(container_veth, sizeof(container_veth), "%s-%d",
@@ -19,16 +21,16 @@ int init_netns(pid_t pid)
 	int r = system(create_veth);
 	if (r != 0) {
 		perror("create veth failed");
-		return 1;
+		return -1;
 	}
-
+	strcpy(ld->host_side_veth, VETH_HOST_IFACE);
 	char set_namespace[256];
 	snprintf(set_namespace, sizeof(set_namespace),
 		 "ip link set %s netns %d", container_veth, pid);
 	r = system(set_namespace);
 	if (r != 0) {
 		perror("set namespace for veth failed");
-		return 1;
+		return -1;
 	}
 
 	char set_host_ip[256];
@@ -37,7 +39,7 @@ int init_netns(pid_t pid)
 	r = system(set_host_ip);
 	if (r != 0) {
 		perror("set host ip failed");
-		return 1;
+		return -1;
 	}
 
 	char set_container_ip[256];
@@ -47,7 +49,7 @@ int init_netns(pid_t pid)
 	r = system(set_container_ip);
 	if (r != 0) {
 		perror("set child ip failed");
-		return 1;
+		return -1;
 	}
 
 	char active_host_interface[256];
@@ -56,7 +58,7 @@ int init_netns(pid_t pid)
 	r = system(active_host_interface);
 	if (r != 0) {
 		perror("activate host interface failed");
-		return 1;
+		return -1;
 	}
 
 	char active_container_interface[256];
@@ -67,7 +69,7 @@ int init_netns(pid_t pid)
 	r = system(active_container_interface);
 	if (r != 0) {
 		perror("active container interface failed");
-		return 1;
+		return -1;
 	}
 
 	char add_default_gateway[256];
@@ -77,7 +79,7 @@ int init_netns(pid_t pid)
 	r = system(add_default_gateway);
 	if (r != 0) {
 		perror("default gateway failed");
-		return 1;
+		return -1;
 	}
 
 	char forward_port[] = "sysctl -w net.ipv4.ip_forward=1";
